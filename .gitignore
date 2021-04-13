@@ -1,4 +1,6 @@
-obj.*
+T1/obj
+T1/.vscode
+T1/crtree
 .vscode.*
 crtree.*
 .DS_Store
