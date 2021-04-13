@@ -1,0 +1,4 @@
+obj.*
+.vscode.*
+crtree.*
+.DS_Store
