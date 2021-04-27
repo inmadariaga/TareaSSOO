@@ -19,18 +19,20 @@ typedef struct Process {
   int waiting_delay;
   int wait_status;
   int waiting_delay_status;
+  int n_pops;
 } Process;
 
 typedef struct Queue {
-  int size,last, capacity, head, priority, quantum, id;
+  int size, capacity, priority, quantum, id;
   int* arr; //cola de procesos
 } Queue;
 
 void enqueue(Queue* queue, int process, Process** processes);
-int dequeue(Queue* queue);
+int dequeue(Queue* queue, int index);
 
 Process* init_process(int pid, char* name, int t_arrival,int cycles,int wait, int waiting_delay);
 Queue* init_queue(int capacity, int priority, int quantum, int id);
-int head(Queue* queue);
 void check_arrival(Process* process, Queue* queue, int time, int index, Process** processes);
 void handle_waiting(Process* process);
+void check_waitings(Process** processes, int n_processes);
+void print_arr(int* arr, int len);

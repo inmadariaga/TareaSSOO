@@ -3,6 +3,7 @@
 #include "structs.h"
 
 void check_arrival(Process* process, Queue* queue, int time, int index, Process** processes){
+  //si llega lo encolo en la primera cola
   if (process->t_arrival == time) {
     process->state = 1;
     process->queue = queue->id;
@@ -16,8 +17,8 @@ void handle_waiting(Process* process) {
     // ¿Lo tengo que despertar?
     if (!process->waiting_delay_status) {
       process->state = 1; // lo despierto
-      process->wait_status = process->wait; // reseteo el wait
-      process->waiting_delay_status = process->waiting_delay; // reseteo el waiting delay 
+      process->wait_status = process->wait; // reseteo el wait_status
+      process->waiting_delay_status = process->waiting_delay; // reseteo el waiting delay
     }
     else {
       process->waiting_time +=1;
@@ -28,5 +29,23 @@ void handle_waiting(Process* process) {
   else if (process->state == 1) {
     process->waiting_time +=1;
   }
-  
+}
+
+void check_waitings(Process** processes, int n_processes) {
+  for (int i = 0; i < n_processes; i++) {
+      handle_waiting(processes[i]);
+  }
+}
+
+void print_arr(int* arr, int len) {
+  printf("[");
+  for (int i = 0; i < len; i++) {
+    if (i == len-1) {
+      printf("%i",arr[i]);
+    }
+    else {
+      printf("%i,",arr[i]);
+    }
+  }
+  printf("]\n");
 }
