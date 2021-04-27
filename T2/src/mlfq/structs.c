@@ -45,6 +45,7 @@ Process* init_process(int pid, char* name, int t_arrival,int cycles,int wait, in
   process->wait_status = process->wait;
   process->waiting_delay_status = process->waiting_delay;
   process->n_pops = 0;
+  process->runs_cpu = 0;
   return process;
 }
 

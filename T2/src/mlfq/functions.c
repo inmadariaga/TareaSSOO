@@ -14,6 +14,7 @@ void handle_waiting(Process* process) {
   // si el proceso esta esperando
   if (process->state == 2)
   {
+    process->waiting_delay_status -= 1;
     // ¿Lo tengo que despertar?
     if (!process->waiting_delay_status) {
       process->state = 1; // lo despierto
@@ -22,7 +23,6 @@ void handle_waiting(Process* process) {
     }
     else {
       process->waiting_time +=1;
-      process->waiting_delay_status -= 1;
     }
   }
   // si el proceso esta ready

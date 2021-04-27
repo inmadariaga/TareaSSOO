@@ -20,6 +20,7 @@ typedef struct Process {
   int wait_status;
   int waiting_delay_status;
   int n_pops;
+  int runs_cpu;
 } Process;
 
 typedef struct Queue {

@@ -47,51 +47,59 @@ int main(int argc, char **argv)
       }
 
     }
-    printf("Cola 0-->");
-    print_arr(queues[0]->arr, n_processes);
-    printf("Cola 1-->");
-    print_arr(queues[1]->arr, n_processes);
+    for (int n = 0; n < n_queues; n++) {
+      printf("Cola %i-->", n);
+      print_arr(queues[n]->arr, n_processes);
+    }
+
+
     if (current_process) {
 
       Process* process = processes[current_process-1];
       Queue* current_queue = queues[process->queue];
-      int runs = process->runs;
-      check_waitings(processes, n_processes);
 
+      check_waitings(processes, n_processes);
+      // ejecutar proceso
+      if (process->wait) {
+        process->wait_status -= 1;
+      }
+      process->runs += 1;
+      process->runs_cpu +=1;
+      process->cycles -= 1;
       // ¿Se le acabo el quantum?
-      if (!(runs%process->quantum)) {
+      int runs = process->runs_cpu;
+      if (runs==process->quantum) {
         printf("Proceso %i perdio quantum\n", current_process);
         process->state = 1;
-        process->interrupted +=1;
+        process->interrupted +=1 ;
         if (process->queue == n_queues-1) {
           enqueue(current_queue, current_process, processes);
-          current_process = 0;
         }
         else {
           enqueue(queues[process->queue + 1], current_process, processes);
-          current_process = 0;
+
         }
+        if (!process->wait_status && process->wait) {
+          printf("Proceso:%i cede CPU\n", current_process);
+          process->state = 2;
+
+        }
+        current_process = 0;
       }
       // se le acabo el wait?
       else if (!process->wait_status && process->wait) {
+        printf("Proceso:%i cede CPU\n", current_process);
         process->state = 2;
         enqueue(queues[0], current_process, processes);
         current_process = 0;
       }
-      else {
-        // hay que ejecutar
-        if (process->wait) {
-          process->wait_status -= 1;
+      if (!process->cycles) {
+          process->state = 3;
+          process->t_finish = t;
+          finish +=1;
+          current_process = 0;
         }
-        process->runs += 1;
-        process->cycles -= 1;
-        if (!process->cycles) {
-            process->state = 3;
-            process->t_finish = t;
-            finish +=1;
-            current_process = 0;
-          }
-      }
+
 
 
     }
@@ -102,7 +110,6 @@ int main(int argc, char **argv)
       {
         Queue* queue = queues[i];
         int process_id = 0;
-        printf("Cola:%i, size-->%i\n", i, queue->size);
         if (queue->size > 0) {
           Process* process;
           for (int j = 0; j < queue->size; j++) {
@@ -114,23 +121,24 @@ int main(int argc, char **argv)
               if (process->state == 1) {
                 current_process = dequeue(queue, j);
                 printf("Saco a %i\n", current_process);
+                process->runs_cpu = 1;
                 find_process = 1;
                 process->state = 0;
                 process->n_pops +=1;
-                if (!process->runs) {
-                  process->t_executed = t;
-                }
-                if (process->wait) {
-                  process->wait_status -=1;
-                }
-                process->runs += 1;
-                process->cycles -= 1;
-                if (!process->cycles) {
-                    process->state = 3;
-                    process->t_finish = t;
-                    finish +=1;
-                    current_process = 0;
+                  if (!process->runs) {
+                    process->t_executed = t;
                   }
+                 if (process->wait) {
+                   process->wait_status -=1;
+                 }
+                 process->runs += 1;
+                 process->cycles -= 1;
+                 if (!process->cycles) {
+                     process->state = 3;
+                     process->t_finish = t;
+                     finish += 1;
+                     current_process = 0;
+                   }
                 break;
               }
             }
@@ -164,7 +172,9 @@ int main(int argc, char **argv)
     }
     t+=1;
     printf("----------------\n");
-    
+    // if (t==20) {
+    //   exit(0);
+    // }
 
 
   }
