@@ -12,8 +12,10 @@ void check_arrival(Process* process, Queue* queue, int time, int index, Process*
 }
 void handle_waiting(Process* process) {
   // si el proceso esta esperando
+  
   if (process->state == 2)
   {
+    process->waiting_time +=1;
     process->waiting_delay_status -= 1;
     // ¿Lo tengo que despertar?
     if (!process->waiting_delay_status) {
@@ -21,9 +23,7 @@ void handle_waiting(Process* process) {
       process->wait_status = process->wait; // reseteo el wait_status
       process->waiting_delay_status = process->waiting_delay; // reseteo el waiting delay
     }
-    else {
-      process->waiting_time +=1;
-    }
+
   }
   // si el proceso esta ready
   else if (process->state == 1) {

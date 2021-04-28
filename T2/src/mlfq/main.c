@@ -38,7 +38,8 @@ int main(int argc, char **argv)
   while(finish < n_processes) {
     printf("T=%i\n", t);
     printf("current_process:%i\n", current_process);
-    // operaciones para todos los procesos que no son el actual
+
+    // checkear llegadas de procesos
     for (int i = 0; i < n_processes; i++) {
       Process* process = processes[i];
       // si no ha llegado verifico si tiene que llegar
@@ -54,11 +55,11 @@ int main(int argc, char **argv)
 
 
     if (current_process) {
-
+      check_waitings(processes, n_processes);
       Process* process = processes[current_process-1];
       Queue* current_queue = queues[process->queue];
 
-      check_waitings(processes, n_processes);
+
       // ejecutar proceso
       if (process->wait) {
         process->wait_status -= 1;
@@ -100,8 +101,6 @@ int main(int argc, char **argv)
           current_process = 0;
         }
 
-
-
     }
     else {
       // sacar un proceso de alguna de las colas
@@ -121,20 +120,20 @@ int main(int argc, char **argv)
               if (process->state == 1) {
                 current_process = dequeue(queue, j);
                 printf("Saco a %i\n", current_process);
-                process->runs_cpu = 1;
                 find_process = 1;
                 process->state = 0;
                 process->n_pops +=1;
-                  if (!process->runs) {
-                    process->t_executed = t;
+                   if (!process->runs) {
+                     process->t_executed = t;
                   }
                  if (process->wait) {
                    process->wait_status -=1;
                  }
                  process->runs += 1;
+                 process->runs_cpu = 1;
                  process->cycles -= 1;
-                 if (!process->cycles) {
-                     process->state = 3;
+                  if (!process->cycles) {
+                      process->state = 3;
                      process->t_finish = t;
                      finish += 1;
                      current_process = 0;
@@ -172,9 +171,7 @@ int main(int argc, char **argv)
     }
     t+=1;
     printf("----------------\n");
-    // if (t==20) {
-    //   exit(0);
-    // }
+
 
 
   }
@@ -184,7 +181,7 @@ int main(int argc, char **argv)
     Process* process = processes[i];
     int tournarround = process->t_finish - process->t_arrival;
     int response_time = process->t_executed - process->t_arrival;
-    fprintf(output,"%s,%i,%i,%i,%i,%i\n",process->name, process->n_pops, process->interrupted, tournarround, response_time, process->waiting_time);
+    fprintf(output,"%s,%i,%i,%i,%i,%i\n",process->name, process->n_pops, process->interrupted, tournarround+1, response_time, process->waiting_time);
 
   }
   fclose(output);
