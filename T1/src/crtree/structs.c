@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include "structs.h"
 
+extern int largo;
+extern Process** todos_procesos;
 //Función para crear un proceso
 Process* create_process(int id, char** process, char*** all_process) {
   Process* proceso = malloc(sizeof(Process));
@@ -27,9 +29,11 @@ Process* create_process(int id, char** process, char*** all_process) {
     }
     proceso->n_args = args_number;
     proceso->args = arguments;
+    proceso->interrumped = 0;
+    proceso->code = -1;
     return proceso;
   } else {
-    // Caso Manager
+    // Caso Manager y root
     proceso->timeout = atoi(process[1]);
     proceso->children_number = atoi(process[2]);
     int* children_list = malloc(proceso->children_number * sizeof(int));
@@ -37,6 +41,8 @@ Process* create_process(int id, char** process, char*** all_process) {
       children_list[child - 3] = atoi(process[child]);
     }
     proceso->children_list = children_list;
+    proceso->interrumped = 0;
+    proceso->code = -1;
     return proceso;
   }
 }
@@ -82,54 +88,89 @@ pid_t execute_root(Process* process, Process** all_process){
   pid_t pid = fork();
   if (pid == 0){
     // proceso root
+    signal(SIGABRT, kill_handler);
+    signal(SIGINT, kill_handler);
     pid_t* children_pids = malloc(process->children_number * sizeof(pid_t));
     int child_id;
     pid_t child_pid;
-    for (int i = 0; i <= process->children_number; i++){
+    Process* child_process;
+    for (int i = 0; i < process->children_number; i++){
       child_id = process->children_list[i];
-      Process* child_process = all_process[child_id];
-      if (strcmp(child_process->type, "W") == 0){
-        time_t begin;
-        time(&begin);
-        child_process->time = begin;
-      }
+      child_process = all_process[child_id];
+      time_t begin;
+      time(&begin);
+      child_process->time = begin;
       child_pid = execute_process(child_id, all_process);
+      child_process->pid = child_pid;
+      printf("ROOT PID %d", process->pid);
+      printf("ITERACION %d\n", i);
+      printf("%s %d\n",child_process->type, process->id);
+      printf("CHILDPID %d\n", child_pid);
       children_pids[i] = child_pid;
     }
     process->children_pids = children_pids;
-    for (int i = 0; i <= process->children_number; i++){
-      pid_t child_pid = process->children_pids[i];
-      int status;
-      waitpid(child_pid, &status, WIFEXITED(status));
-      Process* child_process = all_process[process->children_list[i]];
-      if (strcmp(child_process->type, "W") == 0){
-        time_t begin, end;
-        time(&end);
-        begin = child_process->time;
-        child_process->time = end - begin;
+    int status;
+    pid_t exited;
+    int exited_childs = 0;
+    time_t begin, end;
+    while (exited_childs < process->children_number)
+    {
+      for (int i = 0; i < process->children_number; i++){
+        pid_t child_pid = process->children_pids[i];
+        exited = waitpid(child_pid, &status, WNOHANG);
+        child_process = all_process[process->children_list[i]];
+        if (exited != 0 && exited != -1){
+          if (strcmp(child_process->type, "W") == 0){
+            time(&end);
+            begin = child_process->time;
+            child_process->time = end - begin;
+            child_process->code = WEXITSTATUS(status);
+          }
+          exited_childs++;
+        } else if (exited != -1 && child_process->interrumped == 0) {
+          if (strcmp(child_process->type, "M") == 0){
+            time(&end);
+            if (end - child_process->time < child_process->timeout) {
+              exited_childs++;
+              interrupt_process(child_process, all_process); //modifica datos almacenados para asi poder g
+              kill(child_pid, SIGABRT);
+            }
+          }
+        }
       }
+      exit(0);
     }
   } else {
     // programa main
+    int status;
+    pid_t exited;
     time_t begin, end;
     time(&begin);
-    pid_t cop;
-    cop = fork();
-    if (cop == 0){
+    time(&end);
+    while (end - begin < process->timeout)
+    {
+      exited = waitpid(pid, &status, WNOHANG);
+      if (exited != 0) {
+        return 0;
+      }
       sleep(1);
       time(&end);
-      while (end - begin < process->timeout)
-      {
-        sleep(1);
+    }
+    process->interrumped = 1;
+    kill(pid, SIGABRT);
+    return 0;
+  }
+}
+
+void interrupt_process(Process* process, Process** all_process){
+  process->interrumped = 1;
+  if (strcmp(process->type, "M") == 0){
+    Process* child;
+    for (int i = 0; i < process->children_number; i++){
+      if (child->code == -1 && child->interrumped == 0){
+        child = all_process[process->children_list[process->children_number]];
+        interrupt_process(child, all_process);
       }
-      pid_t ppid = getppid();
-      kill(ppid, SIGABRT);
-      exit(0);
-    } else {
-      signal(SIGABRT, manager_receptor);
-      // signal(SIGINT, SIG_IGN); esto es para el manager
-      int status;
-      pid_t exited_child = wait(&status);
     }
   }
 }
@@ -137,42 +178,57 @@ pid_t execute_root(Process* process, Process** all_process){
 pid_t execute_manager(Process* process, Process** all_process){
   pid_t pid = fork();
   if (pid == 0){
-    //proceso manager
+    // proceso manager
+    signal(SIGABRT, kill_handler);
+    signal(SIGINT, SIG_IGN);
     pid_t* children_pids = malloc(process->children_number * sizeof(pid_t));
     int child_id;
     pid_t child_pid;
-    for (int i = 0; i <= process->children_number; i++){
+    Process* child_process;
+    for (int i = 0; i < process->children_number; i++){
       child_id = process->children_list[i];
-      Process* child_process = all_process[child_id];
-      if (strcmp(child_process->type, "W") == 0){
-        time_t begin;
-        time(&begin);
-        child_process->time = begin;
-      }
+      child_process = all_process[child_id];
+      time_t begin;
+      time(&begin);
+      child_process->time = begin;
       child_pid = execute_process(child_id, all_process);
+      printf("CHILD PID %d\n", child_pid);
+      child_process->pid = child_pid;
       children_pids[i] = child_pid;
     }
     process->children_pids = children_pids;
-    for (int i = 0; i <= process->children_number; i++)
+    int status;
+    pid_t exited;
+    int exited_childs = 0;
+    time_t begin, end;
+    while (exited_childs < process->children_number)
     {
-      pid_t child_pid = process->children_pids[i];
-      int status;
-      waitpid(child_pid, &status, WIFEXITED(status));
-      Process* child_process = all_process[process->children_list[i]];
-      if (strcmp(child_process->type, "W") == 0){
-        time_t begin, end;
-        time(&end);
-        begin = child_process->time;
-        child_process->time = end - begin;
+      for (int i = 0; i < process->children_number; i++){
+        pid_t child_pid = process->children_pids[i];
+        exited = waitpid(child_pid, &status, WNOHANG);
+        child_process = all_process[process->children_list[i]];
+        if (exited != 0 && exited != -1){
+          if (strcmp(child_process->type, "W") == 0){
+            time(&end);
+            begin = child_process->time;
+            child_process->time = end - begin;
+            child_process->code = WEXITSTATUS(status);
+          }
+          exited_childs++;
+        } else if (exited != -1 && child_process->interrumped == 0) {
+          if (strcmp(child_process->type, "M") == 0){
+            time(&end);
+            if (end - child_process->time < child_process->timeout) {
+              exited_childs++;
+              interrupt_process(child_process, all_process);
+              kill(child_pid, SIGABRT);
+            }
+          }
+        }
       }
-      char* text = output(child_process, all_process);
-      child_process->text = text;
+      exit(0);
     }
-    char* text = output(process, all_process);
-    process->text = text;
-    exit(0);
   } else {
-    // proceso padre del manager 
     return pid;
   }
 }
@@ -190,8 +246,10 @@ pid_t execute_worker(Process* process){
 pid_t execute_process(int process_id, Process** all_process){
   Process* process = all_process[process_id];
   if (strcmp(process->type, "W") == 0){
+    printf("WORKER %d\n", process_id);
     return execute_worker(process);
-  } else if (strcmp(process->type, "M")){
+  } else if (strcmp(process->type, "M") == 0){
+    printf("manager %d\n", process_id);
     return execute_manager(process, all_process);
   } else {
     return execute_root(process, all_process);
@@ -201,6 +259,25 @@ pid_t execute_process(int process_id, Process** all_process){
 void manager_receptor(Process* process){
   for (int i = 0; i < process->children_number; i++){
     kill(process->children_pids[i], SIGABRT);
+  }
+}
+
+void kill_handler(int sig){
+  printf("HAY KILL\n");
+  pid_t pid = getpid();
+  int id;
+  Process* process;
+  for (int i = 0; i < largo; i++){
+    process = todos_procesos[i];
+    if (process->pid == pid){
+      id = process->id;
+    }
+  }
+  process = todos_procesos[id];
+  Process* child;
+  for (int i = 0; i < process->children_number; i++){
+    child = process->children_list[i];
+    kill(child->pid, SIGABRT);
   }
 }
 

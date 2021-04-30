@@ -6,6 +6,7 @@ typedef struct process {
   // transversal a ambos
   char* type;
   int id;
+  pid_t pid;
   // worker
   char* program;
   int n_args;
@@ -24,5 +25,8 @@ typedef struct process {
 
 Process* create_process(int id, char** process, char*** all_process);
 pid_t execute_process(int process_id, Process** all_process);
+char* output(Process* process, Process** all_process);
+void kill_handler(int sig);
+void interrupt_process(Process* process, Process** all_process);
 void manager_receptor(Process* process);
 void free_process(Process* process);
