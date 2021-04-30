@@ -12,7 +12,7 @@ void check_arrival(Process* process, Queue* queue, int time, int index, Process*
 }
 void handle_waiting(Process* process) {
   // si el proceso esta esperando
-  
+
   if (process->state == 2)
   {
     process->waiting_time +=1;
@@ -35,17 +35,4 @@ void check_waitings(Process** processes, int n_processes) {
   for (int i = 0; i < n_processes; i++) {
       handle_waiting(processes[i]);
   }
-}
-
-void print_arr(int* arr, int len) {
-  printf("[");
-  for (int i = 0; i < len; i++) {
-    if (i == len-1) {
-      printf("%i",arr[i]);
-    }
-    else {
-      printf("%i,",arr[i]);
-    }
-  }
-  printf("]\n");
 }

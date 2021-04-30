@@ -36,4 +36,3 @@ Queue* init_queue(int capacity, int priority, int quantum, int id);
 void check_arrival(Process* process, Queue* queue, int time, int index, Process** processes);
 void handle_waiting(Process* process);
 void check_waitings(Process** processes, int n_processes);
-void print_arr(int* arr, int len);

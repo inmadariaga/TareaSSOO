@@ -36,10 +36,7 @@ int main(int argc, char **argv)
   int t = 0;
   int current_process = 0;
   while(finish < n_processes) {
-    printf("T=%i\n", t);
-    printf("current_process:%i\n", current_process);
-
-    // checkear llegadas de procesos
+      // checkear llegadas de procesos
     for (int i = 0; i < n_processes; i++) {
       Process* process = processes[i];
       // si no ha llegado verifico si tiene que llegar
@@ -47,10 +44,6 @@ int main(int argc, char **argv)
         check_arrival(process, queues[0], t, i+1, processes);
       }
 
-    }
-    for (int n = 0; n < n_queues; n++) {
-      printf("Cola %i-->", n);
-      print_arr(queues[n]->arr, n_processes);
     }
 
 
@@ -70,7 +63,6 @@ int main(int argc, char **argv)
       // ¿Se le acabo el quantum?
       int runs = process->runs_cpu;
       if (runs==process->quantum) {
-        printf("Proceso %i perdio quantum\n", current_process);
         process->state = 1;
         process->interrupted +=1 ;
         if (process->queue == n_queues-1) {
@@ -81,7 +73,6 @@ int main(int argc, char **argv)
 
         }
         if (!process->wait_status && process->wait) {
-          printf("Proceso:%i cede CPU\n", current_process);
           process->state = 2;
 
         }
@@ -89,7 +80,6 @@ int main(int argc, char **argv)
       }
       // se le acabo el wait?
       else if (!process->wait_status && process->wait) {
-        printf("Proceso:%i cede CPU\n", current_process);
         process->state = 2;
         enqueue(queues[0], current_process, processes);
         current_process = 0;
@@ -119,7 +109,6 @@ int main(int argc, char **argv)
 
               if (process->state == 1) {
                 current_process = dequeue(queue, j);
-                printf("Saco a %i\n", current_process);
                 find_process = 1;
                 process->state = 0;
                 process->n_pops +=1;
@@ -170,7 +159,6 @@ int main(int argc, char **argv)
 
     }
     t+=1;
-    printf("----------------\n");
 
 
 
